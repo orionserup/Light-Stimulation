@@ -1,6 +1,6 @@
 
 from tkinter import Tk, Label, Entry, Button
-import driver
+from driver import *
 
 # connect to the core and get the parameters from it
 
@@ -13,7 +13,7 @@ def send():
 
     # first make sure that the data is not void or non int string
     
-    vals = params()  # default all values to None 
+    vals = params()
     
     try:  # write the values to the parameter object
         
@@ -24,7 +24,7 @@ def send():
         vals.offtime =    int(offtimetextbox.get())
         
 
-    except ValueError as VE:  # if blank or non int leave the value as none
+    except ValueError:  # if blank or non int leave the value as none
         pass
 
     # Check if the values are within their respective ranges, if not leave them what they were
