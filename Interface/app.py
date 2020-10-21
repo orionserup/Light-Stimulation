@@ -1,11 +1,11 @@
 
 from tkinter import Tk, Label, Entry, Button
-from driver import *
+import driver
 
 # connect to the core and get the parameters from it
 
-port = connect()
-params = readparams(port)
+port = driver.connect()
+params = driver.readparams(port)
 
 # button callback for sending parameters
 
@@ -13,7 +13,7 @@ def send():
 
     # first make sure that the data is not void or non int string
     
-    vals = params()
+    vals = driver.params()
     
     try:  # write the values to the parameter object
         
@@ -29,15 +29,15 @@ def send():
 
     # Check if the values are within their respective ranges, if not leave them what they were
     
-    if vals.red not in LED_RANGE: vals.red = None
-    if vals.ir not in LED_RANGE: vals.ir = None
-    if vals.freq not in FREQ_RANGE: vals.freq = None
-    if vals.ontime not in TIME_RANGE: vals.ontime = None
-    if vals.offtime not in TIME_RANGE: vals.offtime = None
+    if vals.red not in driver.LED_RANGE: vals.red = None
+    if vals.ir not in driver.LED_RANGE: vals.ir = None
+    if vals.freq not in driver.FREQ_RANGE: vals.freq = None
+    if vals.ontime not in driver.TIME_RANGE: vals.ontime = None
+    if vals.offtime not in driver.TIME_RANGE: vals.offtime = None
     
     # send the parameters to the device using the api
 
-    sendparams(port, vals)
+    driver.sendparams(port, vals)
 
     # reset the device so that it takes place 
 
@@ -46,7 +46,8 @@ def send():
 
 # button callback for resetting the counter
 
-def rstcntr(): resetcounter(port)
+def rstcntr(): 
+    driver.resetcounter(port)
 
 # print the parameters
 
@@ -59,7 +60,7 @@ window.title("Light Stimulation")
 
 # create a label for the session counter and a space 
 
-counterlabel = Label(text = "Session Counter: " + str(getcounter(port)))
+counterlabel = Label(text = "Session Counter: " + str(driver.getcounter(port)))
 space1 = Label()
 
 # create a label for the frequency value
@@ -79,12 +80,12 @@ irtextbox = Entry(width = 2)
 
 # create a label and entry box for the session length
 
-ontimelabel = Label(text = "Session Length (0-100): Current: " + str(params.ontime), height=1, width=30)
+ontimelabel = Label(text = "Session Length (0-100 Min): Current: " + str(params.ontime), height=1, width=30)
 ontimetextbox = Entry(width=3)
 
 # create a label an entry box for break time
 
-offtimelabel = Label(text = "Session Break Length (0-100): Current: " + str(params.ontime), height=1, width=30)
+offtimelabel = Label(text = "Break Length (0-100 Min): Current: " + str(params.ontime), height=1, width=30)
 offtimetextbox = Entry(width=3)
                         
 # create a button for sending the parameters and resetting the counter
