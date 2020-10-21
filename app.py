@@ -1,6 +1,8 @@
 import driver 
 from tkinter import Tk, Label, Entry, Button
 
+from driver import FREQ_RANGE, LED_RANGE, TIME_RANGE
+
 # connect to the core and get the parameters from it
 
 port = driver.connect()
@@ -10,34 +12,37 @@ params = driver.readparams(port)
 
 def send():   
 
-    # first make sure that the data is not void or out of bounds
+    # first make sure that the data is not void or non int string
+    
+    vals = driver.params()  # default all values to None 
+    
+    try:  # write the values to the parameter object
+        
+        vals.red     =    int(redtextbox.get())    
+        vals.ir      =    int(irtextbox.get())
+        vals.freq    =    int(freqtextbox.get())
+        vals.ontime  =    int(ontimetextbox.get())
+        vals.offtime =    int(offtimetextbox.get())
+        
 
-    red = redtextbox.get()   
-    ir = irtextbox.get()
-    freq = freqtextbox.get()
+    except ValueError as VE:  # if blank or non int leave the value as none
+        pass
 
-    if( red == '' or int(red) < 1 or int(red) > 99):
-        red = params.red
-
-    if(ir == '' or int(ir) < 1 or int(ir) > 99): 
-        ir = params.ir
-
-    if((freq == '') or (int(freq) < 1) or (int(freq) > 10000)):
-        freq = params.freq
-
-    # then fill a paramater object 
-
-    params.red = int(red)
-    params.ir = int(ir)
-    params.freq = int(freq)
-
+    # Check if the values are within their respective ranges, if not leave them what they were
+    
+    if vals.red not in LED_RANGE: vals.red = None
+    if vals.ir not in LED_RANGE: vals.ir = None
+    if vals.freq not in FREQ_RANGE: vals.freq = None
+    if vals.ontime not in TIME_RANGE: vals.ontime = None
+    if vals.offtime not in TIME_RANGE: vals.offtime = None
+    
     # send the parameters to the device using the api
 
-    driver.sendparams(port, params)
+    driver.sendparams(port, vals)
 
     # reset the device so that it takes place 
 
-    port.reset(halt =False)
+    port.reset(halt = False)
 
 
 # button callback for resetting the counter
@@ -73,6 +78,16 @@ redtextbox = Entry( width= 2)
 
 irlabel = Label(text = "IR Value (0-99 %): Current: " + str(params.ir), height=1, width = 30)
 irtextbox = Entry(width = 2)
+
+# create a label and entry box for the session length
+
+ontimelabel = Label(text = "Session Length (0-100): Current: " + str(params.ontime), height=1, width=30)
+ontimetextbox = Entry(width=3)
+
+# create a label an entry box for break time
+
+offtimelabel = Label(text = "Session Break Length (0-100): Current: " + str(params.ontime), height=1, width=30)
+offtimetextbox = Entry(width=3)
                         
 # create a button for sending the parameters and resetting the counter
 
@@ -82,6 +97,12 @@ reset = Button(text="RESET COUNTER", fg = "blue", command = rstcntr)
 # place all of the widgets on a grid
 
 counterlabel.grid(row = 0, column = 0)
+
+ontimelabel.grid(row = 2, column= 0)
+ontimetextbox.grid(row = 2, column = 1)
+
+offtimelabel.grid(row = 3, column = 0)
+offtimetextbox.grid(row = 3, column = 1)
 
 freqlabel.grid(row = 4, column = 0)
 freqtextbox.grid(row = 4, column = 1)
