@@ -19,7 +19,8 @@ def send():
         
         vals.red     =    int(redtextbox.get())    
         vals.ir      =    int(irtextbox.get())
-        vals.freq    =    int(freqtextbox.get())
+        vals.redfreq =    int(redfreqtextbox.get())
+        vals.irfreq  =    int(irfreqtextbox.get())
         vals.ontime  =    int(ontimetextbox.get())
         vals.offtime =    int(offtimetextbox.get())
         
@@ -31,7 +32,8 @@ def send():
     
     if vals.red not in driver.LED_RANGE: vals.red = None
     if vals.ir not in driver.LED_RANGE: vals.ir = None
-    if vals.freq not in driver.FREQ_RANGE: vals.freq = None
+    if vals.redfreq not in driver.FREQ_RANGE: vals.redfreq = None
+    if vals.irfreq not in driver.FREQ_RANGE: vals.irfreq = None
     if vals.ontime not in driver.TIME_RANGE: vals.ontime = None
     if vals.offtime not in driver.TIME_RANGE: vals.offtime = None
     
@@ -49,9 +51,6 @@ def send():
 def rstcntr(): 
     driver.resetcounter(port)
 
-# print the parameters
-
-print("\nRED: " + str(params.red) + "\nIR: " + str(params.ir) + "\nFREQ: " + str(params.freq) + '\n')
 
 # create a blank canvas called Light stimulation
 
@@ -63,17 +62,22 @@ window.title("Light Stimulation")
 counterlabel = Label(text = "Session Counter: " + str(driver.getcounter(port)))
 space1 = Label()
 
-# create a label for the frequency value
+# create a label for the red frequency value
 
-freqlabel = Label( text = "Frequency (1-10000 Hz): Current: " + str(params.freq), height=1, width=30)
-freqtextbox = Entry( width= 5)
+redfreqlabel = Label( text = " Red Frequency (1-10000 Hz): Current: " + str(params.redfreq), height=1, width=30)
+redfreqtextbox = Entry( width = 5)
 
 # create a label for the red pwm Value
 
 redlabel = Label(text = "Red Value (0-99 %): Current: " + str(params.red), height=1, width=30)
-redtextbox = Entry( width= 2)
+redtextbox = Entry( width = 2)
 
-# create a label for the IR PWM Value
+#create a label and entry window for the ir freq value
+
+irfreqlabel = Label(text = "IR Frequency (1-10000 Hz): Current: " + str(params.irfreq), height=1, width=30)
+irfreqtextbox = Entry( width = 5)
+
+# create a label and entry window for the IR PWM Value
 
 irlabel = Label(text = "IR Value (0-99 %): Current: " + str(params.ir), height=1, width = 30)
 irtextbox = Entry(width = 2)
@@ -97,17 +101,20 @@ reset = Button(text="RESET COUNTER", fg = "blue", command = rstcntr)
 
 counterlabel.grid(row = 0, column = 0)
 
-ontimelabel.grid(row = 2, column= 0)
-ontimetextbox.grid(row = 2, column = 1)
+ontimelabel.grid(row = 1, column= 0)
+ontimetextbox.grid(row = 1, column = 1)
 
-offtimelabel.grid(row = 3, column = 0)
-offtimetextbox.grid(row = 3, column = 1)
+offtimelabel.grid(row = 2, column = 0)
+offtimetextbox.grid(row = 2, column = 1)
 
-freqlabel.grid(row = 4, column = 0)
-freqtextbox.grid(row = 4, column = 1)
+redfreqlabel.grid(row = 3, column = 0)
+redfreqtextbox.grid(row = 3, column = 1)
 
-redlabel.grid(row = 5, column = 0)
-redtextbox.grid(row = 5, column = 1)
+redlabel.grid(row = 4, column = 0)
+redtextbox.grid(row = 4, column = 1)
+
+irfreqlabel.grid(row = 5, column = 0)
+irfreqtextbox.grid(row = 5, column = 1)
 
 irlabel.grid(row = 6, column = 0)
 irtextbox.grid( row = 6, column = 1)

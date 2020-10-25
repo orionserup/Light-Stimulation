@@ -33,7 +33,8 @@
 #define ONTIME_ADDRESS 0x0800e010
 #define OFFTIME_ADDRESS 0x0800e018
 
-#define FREQ_ADDRESS 0x0800f000
+#define RED_FREQ_ADDRESS 0x0800f000
+#define IR_FREQ_ADDRESS  0x800f008
 
 #define TIM_FREQ 10000
 
@@ -41,17 +42,21 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM15_Init(void);
 static void WAIT(int minutes);
 static void SET_LED(short ir, short red);
 static void INC_COUNTER(void);
+
 static unsigned int GET_RED(unsigned int ARR);
 static unsigned int GET_IR(unsigned int ARR);
-static unsigned int GET_ARR(void);
+static unsigned int GET_RED_ARR(void);
+static unsigned int GET_IR_ARR(void);
 static unsigned int GET_ONTIME(void);
 static unsigned int GET_OFFTIME(void);
 
 RTC_HandleTypeDef hrtc;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim15;
 
 /**
   * @brief  The application entry point.
@@ -66,12 +71,17 @@ int main(void)
   MX_GPIO_Init();
   MX_RTC_Init();
   MX_TIM2_Init();
+	MX_TIM15_Init();
 	
-	unsigned int arr = GET_ARR();
-	__HAL_TIM_SET_AUTORELOAD(&htim2, arr);
+	unsigned int redarrvalue = GET_RED_ARR();
+	__HAL_TIM_SET_AUTORELOAD(&htim2, redarrvalue);
 	
-	uint32_t red = GET_RED(arr);
-	uint32_t ir = GET_IR(arr);
+	unsigned int irarrvalue = GET_IR_ARR();
+	__HAL_TIM_SET_AUTORELOAD(&htim15, irarrvalue);
+	
+	uint32_t red = GET_RED(redarrvalue);
+	uint32_t ir = GET_IR(irarrvalue);
+	
 	uint32_t ontime = GET_ONTIME();
 	uint32_t offtime = GET_OFFTIME();
  
@@ -91,7 +101,7 @@ int main(void)
 void SET_LED(short ir, short red){
 	
 	TIM2->CCR2 = ir;
-	TIM2->CCR3 = red;
+	TIM15->CCR1 = red;
 	
 }
 
@@ -113,11 +123,19 @@ unsigned int GET_IR( unsigned int ARR ){
 	
 }
 
-unsigned int GET_ARR(){
+unsigned int GET_RED_ARR(){
 	
-	uint64_t freq = *(uint64_t*)FREQ_ADDRESS;
+	uint64_t freq = *(uint64_t*)RED_FREQ_ADDRESS;
 	
 	return (TIM_FREQ/(unsigned int)freq) -1;  // if an actual value then return the corresponding value
+	
+}
+
+unsigned int GET_IR_ARR(){
+	
+	uint64_t freq = *(uint64_t*)IR_FREQ_ADDRESS;
+	
+	return (TIM_FREQ/(unsigned int)freq) - 1;
 	
 }
 
@@ -308,47 +326,71 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_TIM_Base_Init(&htim2);
+	
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
+	
+	HAL_TIM_PWM_Init(&htim2);
+	
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
+	
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.Pulse = 0;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-  HAL_TIM_MspPostInit(&htim2);
+  
+	HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2);
 	
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 	
-	HAL_TIM_Base_Init(&htim2);
+}
+
+/* USER CODE BEGIN TIM2_Init 0 */
+
+static void MX_TIM15_Init(){
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM15;
+  htim2.Init.Prescaler = 399;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 1;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  
+	HAL_TIM_Base_Init(&htim15);
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  
+	HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig);
+	
+	HAL_TIM_PWM_Init(&htim15);
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  
+	HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig);
+	
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  
+	HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1);
+	
+	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 
 }
 
