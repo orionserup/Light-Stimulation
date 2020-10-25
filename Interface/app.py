@@ -80,12 +80,12 @@ irtextbox = Entry(width = 2)
 
 # create a label and entry box for the session length
 
-ontimelabel = Label(text = "Session Length (0-100 Min): Current: " + str(params.ontime), height=1, width=30)
+ontimelabel = Label(text = "Session Length (0-100 Min): Current: "  + str(params.ontime), height=1, width=30)
 ontimetextbox = Entry(width=3)
 
 # create a label an entry box for break time
 
-offtimelabel = Label(text = "Break Length (0-100 Min): Current: " + str(params.ontime), height=1, width=30)
+offtimelabel = Label(text = "Break Length (0-100 Min): Current: "  + str(params.ontime), height=1, width=30)
 offtimetextbox = Entry(width=3)
                         
 # create a button for sending the parameters and resetting the counter
