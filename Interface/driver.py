@@ -1,16 +1,12 @@
 import pylink
 
-REDFREQADDRESS = 0x0800f000
-REDADDRESS = 0x0800e000
-IRFREQADDRESS = 0x0800f008
-IRADDRESS = 0x0800e008
-ONTIME_ADDRESS = 0x0800e010
+REDFREQADDRESS =  0x0800e020
+REDADDRESS =      0x0800e000
+IRFREQADDRESS =   0x0800e028
+IRADDRESS =       0x0800e008
+ONTIME_ADDRESS =  0x0800e010
 OFFTIME_ADDRESS = 0x0800e018
-FLASH_COUNTER = 0x0800d000
-
-LED_RANGE = range(100)
-TIME_RANGE = range(1000)
-FREQ_RANGE = range(10000)
+FLASH_COUNTER =   0x0800d000
 
 # class that holds the stimulation parameters
 class params:
@@ -35,6 +31,7 @@ def connect():
         if(link.connected()):
             print("***************** CONNECTED ********************** \n\n")
             print("CORE ID :" + str(link.core_id()))
+
             return link
 
     exit()
@@ -42,20 +39,9 @@ def connect():
 #sends the color params over the Serial port port and logs it in the 
 
 def sendparams(link, params):
+    link.flash_write32(addr=REDADDRESS, data=[params.red, 0, params.ir, 0,params.ontime,
+                                     0, params.offtime, 0, params.redfreq, 0, params.irfreq, 0])
 
-    red = [params.red, 0]
-    ir = [params.ir, 0]
-    redfreq = [params.redfreq, 0]
-    irfreq = [params.irfreq, 0]
-    ontime = [params.ontime, 0]
-    offtime = [params.offtime, 0]
-
-    if red[0] is not None: link.flash_write32(REDADDRESS, red)
-    if ir[0] is not None: link.flash_write32(IRADDRESS, ir)
-    if redfreq[0] is not None: link.flash_write32(REDFREQADDRESS, redfreq)
-    if irfreq[0] is not None: link.flash_write32(IRFREQADDRESS, irfreq)
-    if ontime[0] is not None: link.flash_write32(ONTIME_ADDRESS, ontime)
-    if offtime[0] is not None: link.flash_write32(OFFTIME_ADDRESS, offtime)
 
 
 # returns the value of the counter in flash
@@ -66,8 +52,7 @@ def getcounter(link):
 # zeros out the counter 
 
 def resetcounter(link):
-    zero = [0, 0]
-    link.flash_write32(FLASH_COUNTER, zero)
+    link.flash_write32(FLASH_COUNTER, [0, 0])
     
 
 # return a parameter object for the user with the saved params
@@ -84,4 +69,5 @@ def readparams(link):
     param.offtime = link.memory_read32(OFFTIME_ADDRESS, 1)[0]
     
     return param
+
 

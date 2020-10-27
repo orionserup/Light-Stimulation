@@ -12,30 +12,35 @@ params = driver.readparams(port)
 def send():   
 
     # first make sure that the data is not void or non int string
-    
-    vals = driver.params()
-    
-    try:  # write the values to the parameter object
-        
-        vals.red     =    int(redtextbox.get())    
-        vals.ir      =    int(irtextbox.get())
-        vals.redfreq =    int(redfreqtextbox.get())
-        vals.irfreq  =    int(irfreqtextbox.get())
-        vals.ontime  =    int(ontimetextbox.get())
-        vals.offtime =    int(offtimetextbox.get())
-        
 
-    except ValueError:  # if blank or non int leave the value as none
+    red, ir, redfreq, irfreq, ontime, offtime = params.red, params.ir, params.redfreq, params.irfreq, params.ontime, params.offtime
+
+    try:
+
+        red     =    int(redtextbox.get())
+        ir      =    int(irtextbox.get())
+        redfreq =    int(redfreqtextbox.get())
+        irfreq  =    int(irfreqtextbox.get())
+        ontime  =    int(ontimetextbox.get())
+        offtime =    int(offtimetextbox.get())
+
+    except ValueError:
         pass
-
-    # Check if the values are within their respective ranges, if not leave them what they were
     
-    if vals.red not in driver.LED_RANGE: vals.red = None
-    if vals.ir not in driver.LED_RANGE: vals.ir = None
-    if vals.redfreq not in driver.FREQ_RANGE: vals.redfreq = None
-    if vals.irfreq not in driver.FREQ_RANGE: vals.irfreq = None
-    if vals.ontime not in driver.TIME_RANGE: vals.ontime = None
-    if vals.offtime not in driver.TIME_RANGE: vals.offtime = None
+    vals = driver.params(red=red, ir=ir, redfreq=redfreq, irfreq=irfreq, ontime=ontime, offtime=offtime)
+ 
+    if (red < 0 or red > 99) : 
+        vals.red = params.red
+    if (ir < 0 or ir > 99): 
+        vals.ir = params.ir
+    if (redfreq < 1 or redfreq > 10000): 
+        vals.redfreq = params.redfreq
+    if (irfreq < 1 or irfreq > 10000):
+        vals.irfreq = params.irfreq
+    if (ontime < 1 or ontime > 1000): 
+        vals.ontime = params.ontime
+    if (offtime < 1 or offtime > 1000):
+        vals.offtime = params.offtime
     
     # send the parameters to the device using the api
 
