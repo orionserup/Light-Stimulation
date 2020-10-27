@@ -33,8 +33,8 @@
 #define ONTIME_ADDRESS 0x0800e010
 #define OFFTIME_ADDRESS 0x0800e018
 
-#define RED_FREQ_ADDRESS 0x0800f000
-#define IR_FREQ_ADDRESS  0x800f008
+#define RED_FREQ_ADDRESS 0x0800e020
+#define IR_FREQ_ADDRESS  0x0800e028
 
 #define TIM_FREQ 10000
 
@@ -184,7 +184,6 @@ void INC_COUNTER(){
 	HAL_FLASH_Unlock();
 	if(counter != 0xffffffffffffffff) HAL_FLASHEx_Erase(&erase, &error);
 	HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, COUNTER_ADDRESS, ++counter);
-	HAL_FLASH_Lock();
 	
 }
 
@@ -200,11 +199,8 @@ void SystemClock_Config(void)
 
   /** Configure the main internal regulator output voltage 
   */
-  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
+	/* Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
@@ -212,10 +208,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.MSICalibrationValue = 0;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_RCC_OscConfig(&RCC_OscInitStruct);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -225,16 +219,13 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0);
+	
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
+	
 }
 
 /**
@@ -266,10 +257,9 @@ static void MX_RTC_Init(void)
   hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
   hrtc.Init.OutPutPullUp = RTC_OUTPUT_PULLUP_NONE;
-  if (HAL_RTC_Init(&hrtc) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_RTC_Init(&hrtc);
+	
 
   /* USER CODE BEGIN Check_RTC_BKUP */
     
@@ -282,20 +272,15 @@ static void MX_RTC_Init(void)
   sTime.Seconds = 0x0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  
+	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+	
   sDate.WeekDay = RTC_WEEKDAY_MONDAY;
   sDate.Month = RTC_MONTH_JANUARY;
   sDate.Date = 0x1;
   sDate.Year = 0x0;
 
-  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN RTC_Init 2 */
+  HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD);
 
   /* USER CODE END RTC_Init 2 */
 
@@ -318,6 +303,8 @@ static void MX_TIM2_Init(void)
   TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM2_Init 1 */
+	
+	HAL_TIM_Base_MspInit(&htim2);
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
@@ -347,7 +334,12 @@ static void MX_TIM2_Init(void)
   
 	HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2);
 	
+	HAL_TIM_Base_Start(&htim15);
+	
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+	
+	HAL_TIM_MspPostInit(&htim2);
+	
 	
 }
 
@@ -363,12 +355,12 @@ static void MX_TIM15_Init(){
   /* USER CODE BEGIN TIM2_Init 1 */
 
   /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM15;
-  htim2.Init.Prescaler = 399;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 399;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 1;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   
 	HAL_TIM_Base_Init(&htim15);
 
@@ -387,9 +379,11 @@ static void MX_TIM15_Init(){
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  
+	
 	HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1);
 	
+	HAL_TIM_Base_Start(&htim15);
+  
 	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 
 }
@@ -406,38 +400,3 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
 }
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-
-  /* USER CODE END Error_Handler_Debug */
-}
-
-#ifdef  USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
-void assert_failed(uint8_t *file, uint32_t line)
-{ 
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
-}
-#endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
