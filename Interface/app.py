@@ -1,11 +1,40 @@
+from tkinter import Label, Frame, Entry, Button, Tk
+import pylink
 
-from tkinter import Tk, Label, Entry, Button
-import driver
+RED_ADDRESS =      0x0800c000
+IR_ADDRESS  =      0x800c800
+ONTIME_ADDRESS =   0x0800e000
+OFFTIME_ADDRESS =  0x0800e800
+RED_FREQ_ADDRESS = 0x0800f000
+IR_FREQ_ADDRESS =  0x0800f800
 
+FLASH_COUNTER =   int(0x0800d000)
 # connect to the core and get the parameters from it
 
-port = driver.connect()
-params = driver.readparams(port)
+# class that holds the stimulation parameters
+class params:
+    def __init__(self, LED = 0, FREQ = 0, TIME = 0):
+        self.LED = LED
+        self.FREQ = FREQ
+        self.TIME = TIME
+
+    def getLED(self) -> list:
+        return self.LED
+
+    def getFREQ(self) -> list:
+        return self.FREQ
+
+    def getTIME(self) -> list:
+        return self.TIME
+
+    def setLED(self, val: list) -> None:
+        self.LED = val
+    
+    def setFREQ(self, val:list) -> None:
+        self.FREQ = val
+
+    def setTIME(self, val) -> None:
+        self.TIME = val
 
 # button callback for sending parameters
 
@@ -13,88 +42,146 @@ def send():
 
     # first make sure that the data is not void or non int string
 
-    red, ir, redfreq, irfreq, ontime, offtime = params.red, params.ir, params.redfreq, params.irfreq, params.ontime, params.offtime
+    vals = params()
 
     try:
-
-        red     =    int(redtextbox.get())
-        ir      =    int(irtextbox.get())
-        redfreq =    int(redfreqtextbox.get())
-        irfreq  =    int(irfreqtextbox.get())
-        ontime  =    int(ontimetextbox.get())
-        offtime =    int(offtimetextbox.get())
+        vals.setLED( [int(irtextbox.get()), int(redtextbox.get())] )
+        vals.setFREQ( [int(redfreqtextbox.get()), int(irfreqtextbox.get())] )
+        vals.setTIME( [int(ontimetextbox.get()), int(offtimetextbox.get())] )
 
     except ValueError:
         pass
     
-    vals = driver.params(red=red, ir=ir, redfreq=redfreq, irfreq=irfreq, ontime=ontime, offtime=offtime)
- 
-    if (red < 0 or red > 99) : 
-        vals.red = params.red
-    if (ir < 0 or ir > 99): 
-        vals.ir = params.ir
-    if (redfreq < 1 or redfreq > 10000): 
-        vals.redfreq = params.redfreq
-    if (irfreq < 1 or irfreq > 10000):
-        vals.irfreq = params.irfreq
-    if (ontime < 1 or ontime > 1000): 
-        vals.ontime = params.ontime
-    if (offtime < 1 or offtime > 1000):
-        vals.offtime = params.offtime
+    if (vals.getLED()[0] < 0 or vals.getLED()[1] < 0 or vals.getLED()[0] > 99 or vals.getLED()[1] > 99): 
+        vals.setLED([50,50])
+    if (vals.getFREQ()[0] < 1 or vals.getFREQ()[1] < 1 or vals.getFREQ()[0] > 10000 or vals.getFREQ()[1] > 10000): 
+        vals.setFREQ([50,50])
+    if (vals.getTIME()[0] < 1 or vals.getTIME()[1] < 1 or vals.getTIME()[0] > 1000 or vals.getTIME()[1] > 1000): 
+        vals.setTIME([10,35])
     
     # send the parameters to the device using the api
 
-    driver.sendparams(port, vals)
+    sendparams(port, vals)
 
     # reset the device so that it takes place 
 
     port.reset(halt = False)
 
 
+def resetcounter(port: pylink.JLink):
+    port.flash_write32(FLASH_COUNTER, [0,0])
+
 # button callback for resetting the counter
 
 def rstcntr(): 
-    driver.resetcounter(port)
+    resetcounter(port)
 
+# returns a serial stream object after checking all of the ports for the device
+
+def connect() -> pylink.JLink:
+    for i in range(5):
+        print( "CONNECTING... Attempt", str(i + 1), '\n')
+
+        link = pylink.JLink()
+        link.open()
+        link.connect(chip_name="STM32L412KB", speed=4000, verbose=True)
+
+        if(link.connected()):
+            print("***************** CONNECTED ********************** \n\n")
+            print("CORE ID :" + str(link.core_id()))
+
+            return link
+
+    exit()
+
+
+#sends the color params over the Serial port port and logs it in the 
+
+def sendparams(link:pylink.jlink.JLink, param:params):
+
+    link.halt()
+
+    red, ir = param.getLED()
+    ontime, offtime = param.getTIME()
+    redfreq, irfreq = param.getFREQ()
+
+    link.flash_write32(RED_ADDRESS, [red])
+    link.flash_write32(IR_ADDRESS, [ir])
+    link.flash_write32(ONTIME_ADDRESS, [ontime])
+    link.flash_write32(OFFTIME_ADDRESS, [offtime])
+    link.flash_write32(RED_FREQ_ADDRESS, [redfreq])
+    link.flash_write32(IR_FREQ_ADDRESS, [irfreq])
+
+    link.reset(halt = False)
+
+    return
+
+def getparams(link) -> params:
+
+    param = params()
+
+    red = link.memory_read32(RED_ADDRESS, 1)[0]
+    ir = link.memory_read32(IR_ADDRESS, 1)[0]
+    ontime = link.memory_read32(ONTIME_ADDRESS, 1)[0]
+    offtime = link.memory_read32(OFFTIME_ADDRESS, 1)[0]
+    redfreq = link.memory_read32(RED_FREQ_ADDRESS, 1)[0]
+    irfreq = link.memory_read32(IR_FREQ_ADDRESS, 1)[0]
+
+    param.setLED([red, ir])
+    param.setFREQ([redfreq, irfreq])
+    param.setTIME([ontime, offtime])
+
+    return param
+
+
+# returns the value of the counter in flash
+
+def getcounter(link) -> None:
+    return link.memory_read64(FLASH_COUNTER, 1)[0]
+
+
+port = connect()
+param = getparams(port)
 
 # create a blank canvas called Light stimulation
 
 window = Tk()
 window.title("Light Stimulation")
 
+
 # create a label for the session counter and a space 
 
-counterlabel = Label(text = "Session Counter: " + str(driver.getcounter(port)))
+counterlabel = Label(text = "Session Counter: " + str(getcounter(port)), height = 1, width = 50)
 space1 = Label()
 
 # create a label for the red frequency value
 
-redfreqlabel = Label( text = " Red Frequency (1-10000 Hz): Current: " + str(params.redfreq), height=1, width=30)
+redfreqlabel = Label( text = " Red Frequency (1-10000 Hz):" , height=1, width=50)
 redfreqtextbox = Entry( width = 5)
-
-# create a label for the red pwm Value
-
-redlabel = Label(text = "Red Value (0-99 %): Current: " + str(params.red), height=1, width=30)
-redtextbox = Entry( width = 2)
 
 #create a label and entry window for the ir freq value
 
-irfreqlabel = Label(text = "IR Frequency (1-10000 Hz): Current: " + str(params.irfreq), height=1, width=30)
+irfreqlabel = Label(text = "IR Frequency (1-10000 Hz): ", height=1, width=50)
 irfreqtextbox = Entry( width = 5)
+
+# create a label for the red pwm Value
+
+redlabel = Label(text = "Red Value (0-99 %): " , height=1, width=50)
+redtextbox = Entry( width = 2)
 
 # create a label and entry window for the IR PWM Value
 
-irlabel = Label(text = "IR Value (0-99 %): Current: " + str(params.ir), height=1, width = 30)
+irlabel = Label(text = "IR Value (0-99 %): ", height=1, width = 50)
 irtextbox = Entry(width = 2)
 
 # create a label and entry box for the session length
 
-ontimelabel = Label(text = "Session Length (0-100 Min): Current: "  + str(params.ontime), height=1, width=30)
+ontimelabel = Label(text = "Session Length (0-100 Min): ", height=1, width=50)
 ontimetextbox = Entry(width=3)
 
 # create a label an entry box for break time
 
-offtimelabel = Label(text = "Break Length (0-100 Min): Current: "  + str(params.ontime), height=1, width=30)
+offtimelabel = Label(text = "Break Length (0-100 Min): " , height=1, width=50)
 offtimetextbox = Entry(width=3)
                         
 # create a button for sending the parameters and resetting the counter
@@ -112,17 +199,17 @@ ontimetextbox.grid(row = 1, column = 1)
 offtimelabel.grid(row = 2, column = 0)
 offtimetextbox.grid(row = 2, column = 1)
 
-redfreqlabel.grid(row = 3, column = 0)
-redfreqtextbox.grid(row = 3, column = 1)
+irlabel.grid(row = 3, column = 0)
+irtextbox.grid( row = 3, column = 1)
 
 redlabel.grid(row = 4, column = 0)
 redtextbox.grid(row = 4, column = 1)
 
-irfreqlabel.grid(row = 5, column = 0)
-irfreqtextbox.grid(row = 5, column = 1)
+redfreqlabel.grid(row = 5, column = 0)
+redfreqtextbox.grid(row = 5, column = 1)
 
-irlabel.grid(row = 6, column = 0)
-irtextbox.grid( row = 6, column = 1)
+irfreqlabel.grid(row = 6, column = 0)
+irfreqtextbox.grid(row = 6, column = 1)
 
 space1.grid(row = 7, column = 0)
 

@@ -20,43 +20,43 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <stdbool.h>
+#include <stdint.h>
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-#define COUNTER_ADDRESS 0x0800d000
-#define COUNTER_PAGE   	26
-
-#define RED_ADDRESS 0x0800e000
-#define IR_ADDRESS  0x0800e008
-
-#define ONTIME_ADDRESS 0x0800e010
-#define OFFTIME_ADDRESS 0x0800e018
-
-#define RED_FREQ_ADDRESS 0x0800e020
-#define IR_FREQ_ADDRESS  0x0800e028
-
-#define TIM_FREQ 10000
 
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_RTC_Init(void);
-static void MX_TIM2_Init(void);
-static void MX_TIM15_Init(void);
+static void MX_TIM_Init(void);
 static void WAIT(int minutes);
 static void SET_LED(short ir, short red);
 static void INC_COUNTER(void);
+static void erasepage(int page);
+static void writeparamstoNVM(int red, int ir, int ontime, int offtime, int redarr, int irarr);
 
-static unsigned int GET_RED(unsigned int ARR);
-static unsigned int GET_IR(unsigned int ARR);
-static unsigned int GET_RED_ARR(void);
-static unsigned int GET_IR_ARR(void);
-static unsigned int GET_ONTIME(void);
-static unsigned int GET_OFFTIME(void);
+static unsigned short GET_RED(unsigned int ARR);
+static unsigned short GET_IR(unsigned int ARR);
+static unsigned short GET_RED_ARR(void);
+static unsigned short GET_IR_ARR(void);
+static unsigned short GET_ONTIME(void);
+static unsigned short GET_OFFTIME(void);
 
 RTC_HandleTypeDef hrtc;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim15;
+
+/* USER CODE BEGIN Includes */
+uint64_t* COUNTER_ADDRESS = (uint64_t*)0x0800d000;
+uint32_t COUNTER_PAGE = 26;
+
+volatile uint64_t* RED_ADDRESS =     (uint64_t*)0x0800c000;
+volatile uint64_t* IR_ADDRESS =      (uint64_t*)0x0800c800;
+volatile uint64_t* ONTIME_ADDRESS =  (uint64_t*)0x0800e000;
+volatile uint64_t* OFFTIME_ADDRESS = (uint64_t*)0x0800e800;
+volatile uint64_t* RED_FREQ_ADDRESS =(uint64_t*)0x0800f000;
+volatile uint64_t* IR_FREQ_ADDRESS = (uint64_t*)0x0800f800;
+
+#define TIM_FREQ 10000
 
 /**
   * @brief  The application entry point.
@@ -66,27 +66,26 @@ int main(void)
 {
  
   HAL_Init();
-
   SystemClock_Config();
   MX_GPIO_Init();
   MX_RTC_Init();
-  MX_TIM2_Init();
-	MX_TIM15_Init();
+	MX_TIM_Init();
 	
-	unsigned int redarrvalue = GET_RED_ARR();
-	__HAL_TIM_SET_AUTORELOAD(&htim2, redarrvalue);
+	uint16_t ir, red, ontime, offtime, redarrvalue, irarrvalue;
 	
-	unsigned int irarrvalue = GET_IR_ARR();
-	__HAL_TIM_SET_AUTORELOAD(&htim15, irarrvalue);
+	redarrvalue = GET_RED_ARR();
+	TIM15->ARR = redarrvalue;
 	
-	uint32_t red = GET_RED(redarrvalue);
-	uint32_t ir = GET_IR(irarrvalue);
+	irarrvalue = GET_IR_ARR();
+	TIM2->ARR = irarrvalue;
 	
-	uint32_t ontime = GET_ONTIME();
-	uint32_t offtime = GET_OFFTIME();
- 
-  while (1)
-  {
+	red = GET_RED(redarrvalue);
+	ir = GET_IR(irarrvalue);
+	
+	ontime = GET_ONTIME();
+	offtime = GET_OFFTIME();
+	
+  while (1){
 		
 		SET_LED(ir, red);
 		WAIT(ontime);
@@ -105,53 +104,69 @@ void SET_LED(short ir, short red){
 	
 }
 
-unsigned int GET_RED( unsigned int ARR ){
+
+void erasepage(int page){
 	
-	uint64_t red = *(uint64_t*) RED_ADDRESS;
+	FLASH_EraseInitTypeDef erase;
 	
-	return (unsigned int)(ARR * (unsigned int)red)/100;
+	erase.Page = page;
+	erase.TypeErase = FLASH_TYPEERASE_PAGES;
+	erase.NbPages = 1;
 	
+	unsigned int error = 0;
+	
+	HAL_FLASH_Unlock();
+	HAL_FLASHEx_Erase(&erase, &error);
+	HAL_FLASH_Lock();
 }
 
 
 
-unsigned int GET_IR( unsigned int ARR ){
+unsigned short GET_IR( unsigned int ARR ){
 	
-	uint64_t ir = *(uint64_t*) IR_ADDRESS;
+	uint64_t ir = *IR_ADDRESS;
 	
-	return (unsigned int)(ARR * (unsigned int)ir)/100;
-	
-}
-
-unsigned int GET_RED_ARR(){
-	
-	uint64_t freq = *(uint64_t*)RED_FREQ_ADDRESS;
-	
-	return (TIM_FREQ/(unsigned int)freq) -1;  // if an actual value then return the corresponding value
+	return (unsigned short)(ARR * (unsigned char)ir)/100;
 	
 }
 
-unsigned int GET_IR_ARR(){
+unsigned short GET_RED( unsigned int ARR ){
 	
-	uint64_t freq = *(uint64_t*)IR_FREQ_ADDRESS;
+	uint64_t red = *RED_ADDRESS;
 	
-	return (TIM_FREQ/(unsigned int)freq) - 1;
-	
-}
-
-unsigned int GET_ONTIME(){
-	
-	uint64_t ontime = *(uint64_t*)ONTIME_ADDRESS;
-	
-	return (uint32_t)ontime;
+	return (unsigned short)(ARR * (unsigned char)red)/100;
 	
 }
 
-unsigned int GET_OFFTIME(){
+unsigned short GET_RED_ARR(){
 	
-	uint64_t offtime = *(uint64_t*)OFFTIME_ADDRESS;
+	uint64_t redfreq = *RED_FREQ_ADDRESS;
 	
-	return (uint32_t)offtime;
+	return (uint16_t)(TIM_FREQ/(unsigned char)redfreq) - 1;  // if an actual value then return the corresponding value
+	
+}
+
+unsigned short GET_IR_ARR(){
+	
+	uint64_t irfreq = *IR_FREQ_ADDRESS;
+	
+	return (uint16_t)(TIM_FREQ/(unsigned char)irfreq) - 1;
+	
+}
+
+unsigned short GET_ONTIME(){
+	
+	uint64_t ontime = *ONTIME_ADDRESS;
+	
+	return (uint16_t)ontime;
+	
+}
+
+unsigned short GET_OFFTIME(){
+	
+	uint64_t offtime = *OFFTIME_ADDRESS;
+	
+	return (uint16_t)offtime;
 	
 }
 
@@ -172,18 +187,12 @@ void WAIT(int minutes){
 
 void INC_COUNTER(){
 
-	FLASH_EraseInitTypeDef erase;
-	erase.Page = COUNTER_PAGE;
-	erase.TypeErase = FLASH_TYPEERASE_PAGES;
-	erase.NbPages = 1;
-	
-	unsigned int error = 0;
-	
 	uint64_t counter = *(uint64_t*)COUNTER_ADDRESS;
 	
 	HAL_FLASH_Unlock();
-	if(counter != 0xffffffffffffffff) HAL_FLASHEx_Erase(&erase, &error);
-	HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, COUNTER_ADDRESS, ++counter);
+	if(counter != 0xffffffffffffffff) erasepage(COUNTER_PAGE);
+	HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, (uint32_t)COUNTER_ADDRESS, ++counter);
+	HAL_FLASH_Lock();
 	
 }
 
@@ -225,7 +234,6 @@ void SystemClock_Config(void)
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
   
 	HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit);
-	
 }
 
 /**
@@ -236,18 +244,9 @@ void SystemClock_Config(void)
 static void MX_RTC_Init(void)
 {
 
-  /* USER CODE BEGIN RTC_Init 0 */
-
-  /* USER CODE END RTC_Init 0 */
-
   RTC_TimeTypeDef sTime = {0};
   RTC_DateTypeDef sDate = {0};
 
-  /* USER CODE BEGIN RTC_Init 1 */
-
-  /* USER CODE END RTC_Init 1 */
-  /** Initialize RTC Only 
-  */
   hrtc.Instance = RTC;
   hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
   hrtc.Init.AsynchPrediv = 127;
@@ -260,13 +259,6 @@ static void MX_RTC_Init(void)
   
 	HAL_RTC_Init(&hrtc);
 	
-
-  /* USER CODE BEGIN Check_RTC_BKUP */
-    
-  /* USER CODE END Check_RTC_BKUP */
-
-  /** Initialize RTC and set the Time and Date 
-  */
   sTime.Hours = 0x0;
   sTime.Minutes = 0x0;
   sTime.Seconds = 0x0;
@@ -282,8 +274,6 @@ static void MX_RTC_Init(void)
 
   HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD);
 
-  /* USER CODE END RTC_Init 2 */
-
 }
 
 /**
@@ -291,102 +281,68 @@ static void MX_RTC_Init(void)
   * @param None
   * @retval None
   */
-static void MX_TIM2_Init(void)
+static void MX_TIM_Init(void)
 {
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
 	
 	HAL_TIM_Base_MspInit(&htim2);
+	HAL_TIM_Base_MspInit(&htim15);
 
-  /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 399;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  
-	HAL_TIM_Base_Init(&htim2);
 	
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  
-	HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
-	
-	HAL_TIM_PWM_Init(&htim2);
-	
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  
-	HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
-	
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  
-	HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2);
-	
-	HAL_TIM_Base_Start(&htim15);
-	
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-	
-	HAL_TIM_MspPostInit(&htim2);
-	
-	
-}
-
-/* USER CODE BEGIN TIM2_Init 0 */
-
-static void MX_TIM15_Init(){
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim15.Instance = TIM15;
+	htim15.Instance = TIM15;
   htim15.Init.Prescaler = 399;
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim15.Init.Period = 1;
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   
+	HAL_TIM_Base_Init(&htim2);
 	HAL_TIM_Base_Init(&htim15);
-
+	
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   
+	HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
 	HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig);
 	
+	HAL_TIM_PWM_Init(&htim2);
 	HAL_TIM_PWM_Init(&htim15);
-
+	
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   
+	HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
 	HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig);
 	
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
+  sConfigOC.Pulse = 50;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
 	
+	HAL_TIM_MspPostInit(&htim2);
+	HAL_TIM_MspPostInit(&htim15);
+
+	HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2);
 	HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1);
 	
+	HAL_TIM_Base_Start(&htim2);
 	HAL_TIM_Base_Start(&htim15);
-  
+	
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
-
+	
+	
 }
+
+/* USER CODE BEGIN TIM2_Init 0 */
 
 /**
   * @brief GPIO Initialization Function
