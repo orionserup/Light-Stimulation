@@ -143,11 +143,14 @@ def getcounter(link) -> None:
 port = connect()
 param = getparams(port)
 
+print("RED: " + str(param.getLED()[0]), "IR: " + str(param.getLED()[1]))
+print("ON TIME: " + str(param.getTIME()[0]), "OFF TIME: " + str(param.getTIME()[1]))
+print("RED FREQUENCY: " + str(param.getFREQ()[0]), "IR FREQUENCY: " + str(param.getFREQ()[1]))
+
 # create a blank canvas called Light stimulation
 
 window = Tk()
 window.title("Light Stimulation")
-
 
 # create a label for the session counter and a space 
 
