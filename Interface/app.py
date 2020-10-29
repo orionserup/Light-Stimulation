@@ -45,7 +45,7 @@ def send():
     vals = params()
 
     try:
-        vals.setLED( [int(irtextbox.get()), int(redtextbox.get())] )
+        vals.setLED( [int(redtextbox.get()), int(irtextbox.get())] )
         vals.setFREQ( [int(redfreqtextbox.get()), int(irfreqtextbox.get())] )
         vals.setTIME( [int(ontimetextbox.get()), int(offtimetextbox.get())] )
 
@@ -115,6 +115,8 @@ def sendparams(link:pylink.jlink.JLink, param:params):
     link.reset(halt = False)
 
     return
+
+# reads the data from the chip and puts the value into a parameter object
 
 def getparams(link) -> params:
 
