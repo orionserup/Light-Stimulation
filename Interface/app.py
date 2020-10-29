@@ -88,7 +88,7 @@ def connect() -> pylink.JLink:
 
         if(link.connected()):
             print("***************** CONNECTED ********************** \n\n")
-            print("CORE ID :" + str(link.core_id()))
+            print("CORE ID :" + str(link.core_id()) + '\n')
 
             return link
 
@@ -145,9 +145,9 @@ def getcounter(link) -> None:
 port = connect()
 param = getparams(port)
 
-print("RED: " + str(param.getLED()[0]), "IR: " + str(param.getLED()[1]))
-print("ON TIME: " + str(param.getTIME()[0]), "OFF TIME: " + str(param.getTIME()[1]))
-print("RED FREQUENCY: " + str(param.getFREQ()[0]), "IR FREQUENCY: " + str(param.getFREQ()[1]))
+print("RED: " + str(param.getLED()[0]), '\n',  "IR: " + str(param.getLED()[1]), '\n')
+print("ON TIME: " + str(param.getTIME()[0]), '\n',  "OFF TIME: " + str(param.getTIME()[1]), '\n')
+print("RED FREQUENCY: " + str(param.getFREQ()[0]), '\n', "IR FREQUENCY: " + str(param.getFREQ()[1]), '\n')
 
 # create a blank canvas called Light stimulation
 
@@ -161,12 +161,12 @@ space1 = Label()
 
 # create a label for the red frequency value
 
-redfreqlabel = Label( text = " Red Frequency (1-10000 Hz):" , height=1, width=50)
+redfreqlabel = Label( text = " Red Frequency (1-5000 Hz):" , height=1, width=50)
 redfreqtextbox = Entry( width = 5)
 
 #create a label and entry window for the ir freq value
 
-irfreqlabel = Label(text = "IR Frequency (1-10000 Hz): ", height=1, width=50)
+irfreqlabel = Label(text = "IR Frequency (1-5000 Hz): ", height=1, width=50)
 irfreqtextbox = Entry( width = 5)
 
 # create a label for the red pwm Value
