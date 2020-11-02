@@ -1,4 +1,4 @@
-from tkinter import Label, Frame, Entry, Button, Tk
+from tkinter import Label, Entry, Button, Tk
 import pylink
 
 RED_ADDRESS =      0x0800c000
@@ -13,7 +13,8 @@ FLASH_COUNTER =   int(0x0800d000)
 
 # class that holds the stimulation parameters
 class params:
-    def __init__(self, LED = 0, FREQ = 0, TIME = 0):
+    
+    def __init__(self, LED = [0,0], FREQ = [0,0], TIME = [0,0]):
         self.LED = LED
         self.FREQ = FREQ
         self.TIME = TIME
@@ -52,6 +53,8 @@ def send():
     except ValueError:
         pass
     
+    # then check for bounding, if out of bounds, set to default values
+    
     if (vals.getLED()[0] < 0 or vals.getLED()[1] < 0 or vals.getLED()[0] > 99 or vals.getLED()[1] > 99): 
         vals.setLED([50,50])
     if (vals.getFREQ()[0] < 1 or vals.getFREQ()[1] < 1 or vals.getFREQ()[0] > 10000 or vals.getFREQ()[1] > 10000): 
@@ -81,15 +84,18 @@ def rstcntr():
 def connect():
 
     for i in range(5):
-        print( "CONNECTING... Attempt", str(i + 1), '\n')
+        print "CONNECTING... Attempt" + str(i + 1) + '\n'
 
+        lib = pylink.library.Library("C:\\Program Files (x86)\\SEGGER\\JLink\\JLink_x64.dll")
+        
+        lib.load()
+        
         link = pylink.JLink()
         link.open()
-
-        lib = pylink.pylink.Library()
         
         print(link.product_name)
         link.oem
+        
         link.connect("STM32L412KB")
 
         if(link.connected()):
