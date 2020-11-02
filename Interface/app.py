@@ -18,22 +18,22 @@ class params:
         self.FREQ = FREQ
         self.TIME = TIME
 
-    def getLED(self) -> list:
+    def getLED(self):
         return self.LED
 
-    def getFREQ(self) -> list:
+    def getFREQ(self):
         return self.FREQ
 
-    def getTIME(self) -> list:
+    def getTIME(self):
         return self.TIME
 
-    def setLED(self, val: list) -> None:
+    def setLED(self, val):
         self.LED = val
     
-    def setFREQ(self, val:list) -> None:
+    def setFREQ(self, val):
         self.FREQ = val
 
-    def setTIME(self, val) -> None:
+    def setTIME(self, val):
         self.TIME = val
 
 # button callback for sending parameters
@@ -68,7 +68,7 @@ def send():
     port.reset(halt = False)
 
 
-def resetcounter(port: pylink.JLink):
+def resetcounter(port):
     port.flash_write32(FLASH_COUNTER, [0,0])
 
 # button callback for resetting the counter
@@ -78,17 +78,23 @@ def rstcntr():
 
 # returns a serial stream object after checking all of the ports for the device
 
-def connect() -> pylink.JLink:
+def connect():
+
     for i in range(5):
         print( "CONNECTING... Attempt", str(i + 1), '\n')
 
         link = pylink.JLink()
         link.open()
-        link.connect(chip_name="STM32L412KB", speed=4000, verbose=True)
+
+        lib = pylink.pylink.Library()
+        
+        print(link.product_name)
+        link.oem
+        link.connect("STM32L412KB")
 
         if(link.connected()):
-            print("***************** CONNECTED ********************** \n\n")
-            print("CORE ID :" + str(link.core_id()) + '\n')
+            print "***************** CONNECTED ********************** \n\n"
+            print "CORE ID :" + str(link.core_id()) + '\n'
 
             return link
 
@@ -97,7 +103,7 @@ def connect() -> pylink.JLink:
 
 #sends the color params over the Serial port port and logs it in the 
 
-def sendparams(link:pylink.jlink.JLink, param:params):
+def sendparams(link, param):
 
     link.halt()
 
@@ -118,7 +124,7 @@ def sendparams(link:pylink.jlink.JLink, param:params):
 
 # reads the data from the chip and puts the value into a parameter object
 
-def getparams(link) -> params:
+def getparams(link):
 
     param = params()
 
@@ -138,16 +144,16 @@ def getparams(link) -> params:
 
 # returns the value of the counter in flash
 
-def getcounter(link) -> None:
+def getcounter(link):
     return link.memory_read64(FLASH_COUNTER, 1)[0]
 
 
 port = connect()
 param = getparams(port)
 
-print("RED: " + str(param.getLED()[0]), '\n',  "IR: " + str(param.getLED()[1]), '\n')
-print("ON TIME: " + str(param.getTIME()[0]), '\n',  "OFF TIME: " + str(param.getTIME()[1]), '\n')
-print("RED FREQUENCY: " + str(param.getFREQ()[0]), '\n', "IR FREQUENCY: " + str(param.getFREQ()[1]), '\n')
+print "RED: " + str(param.getLED()[0]) +  '\n',  "IR: " + str(param.getLED()[1]) + '\n'
+print "ON TIME: " + str(param.getTIME()[0]) + '\n',  "OFF TIME: " + str(param.getTIME()[1]) + '\n'
+print "RED FREQUENCY: " + str(param.getFREQ()[0]) + '\n', "IR FREQUENCY: " + str(param.getFREQ()[1]) + '\n'
 
 # create a blank canvas called Light stimulation
 
