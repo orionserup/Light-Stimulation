@@ -84,22 +84,25 @@ def rstcntr():
 def connect():
 
     for i in range(5):
-        print "CONNECTING... Attempt" + str(i + 1) + '\n'
+        print "CONNECTING... Attempt " + str(i + 1) + '\n'
 
         lib = pylink.library.Library("C:\\Program Files (x86)\\SEGGER\\JLink\\JLink_x64.dll")
         
-        lib.load()
+        link = pylink.JLink(lib=lib)
         
-        link = pylink.JLink()
         link.open()
+        
+        link.set_tif(pylink.enums.JLinkInterfaces.SWD)
+        
+        print "Link Opened?: " + str(link.opened())
         
         print(link.product_name)
         link.oem
         
-        link.connect("STM32L412KB")
+        link.connect("STM32L412KB", speed=100, verbose=True)
 
         if(link.connected()):
-            print "***************** CONNECTED ********************** \n\n"
+            print "***************** CONNECTED ********************** \n"
             print "CORE ID :" + str(link.core_id()) + '\n'
 
             return link
