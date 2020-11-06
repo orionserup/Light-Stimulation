@@ -28,16 +28,15 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM_Init(void);
-static void WAIT(int minutes);
+static void WAIT(unsigned int minutes);
 static void SET_LED(short ir, short red);
 static void INC_COUNTER(void);
 static void erasepage(int page);
-static void writeparamstoNVM(int red, int ir, int ontime, int offtime, int redarr, int irarr);
 
 static unsigned short GET_RED(unsigned int ARR);
 static unsigned short GET_IR(unsigned int ARR);
-static unsigned short GET_RED_ARR(void);
-static unsigned short GET_IR_ARR(void);
+static unsigned int GET_RED_ARR(void);
+static unsigned int GET_IR_ARR(void);
 static unsigned short GET_ONTIME(void);
 static unsigned short GET_OFFTIME(void);
 
@@ -46,17 +45,18 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim15;
 
 /* USER CODE BEGIN Includes */
-uint64_t* COUNTER_ADDRESS = (uint64_t*)0x0800d000;
-uint32_t COUNTER_PAGE = 26;
 
-volatile uint64_t* RED_ADDRESS =     (uint64_t*)0x0800c000;
-volatile uint64_t* IR_ADDRESS =      (uint64_t*)0x0800c800;
-volatile uint64_t* ONTIME_ADDRESS =  (uint64_t*)0x0800e000;
-volatile uint64_t* OFFTIME_ADDRESS = (uint64_t*)0x0800e800;
-volatile uint64_t* RED_FREQ_ADDRESS =(uint64_t*)0x0800f000;
-volatile uint64_t* IR_FREQ_ADDRESS = (uint64_t*)0x0800f800;
+volatile uint64_t* const COUNTER_ADDRESS = (uint64_t*)0x0800d000;
+const uint32_t COUNTER_PAGE = 26;
 
-#define TIM_FREQ 10000
+volatile uint64_t* const RED_ADDRESS =     (uint64_t*)0x0800c000;
+volatile uint64_t* const IR_ADDRESS =      (uint64_t*)0x0800c800;
+volatile uint64_t* const ONTIME_ADDRESS =  (uint64_t*)0x0800e000;
+volatile uint64_t* const OFFTIME_ADDRESS = (uint64_t*)0x0800e800;
+volatile uint64_t* const RED_FREQ_ADDRESS =(uint64_t*)0x0800f000;
+volatile uint64_t* const IR_FREQ_ADDRESS = (uint64_t*)0x0800f800;
+
+const float TIM_FREQ = (float)100000.0f;
 
 /**
   * @brief  The application entry point.
@@ -71,7 +71,8 @@ int main(void)
   MX_RTC_Init();
 	MX_TIM_Init();
 	
-	uint16_t ir, red, ontime, offtime, redarrvalue, irarrvalue;
+	uint16_t ir, red, ontime, offtime;
+	uint32_t redarrvalue, irarrvalue;
 	
 	redarrvalue = GET_RED_ARR();
 	TIM15->ARR = redarrvalue;
@@ -138,19 +139,27 @@ unsigned short GET_RED( unsigned int ARR ){
 	
 }
 
-unsigned short GET_RED_ARR(){
+unsigned int GET_RED_ARR(){
 	
 	uint64_t redfreq = *RED_FREQ_ADDRESS;
 	
-	return (uint16_t)(TIM_FREQ/(unsigned char)redfreq) - 1;  // if an actual value then return the corresponding value
+	uint32_t freq = (uint32_t)redfreq;
+	
+	float ratio = TIM_FREQ/freq;
+	
+	return (uint32_t)(ratio - 1.0f);  
 	
 }
 
-unsigned short GET_IR_ARR(){
+unsigned int GET_IR_ARR(){
 	
 	uint64_t irfreq = *IR_FREQ_ADDRESS;
 	
-	return (uint16_t)(TIM_FREQ/(unsigned char)irfreq) - 1;
+	uint32_t freq = (uint32_t)irfreq;
+	
+	float ratio = TIM_FREQ/freq;
+	
+	return (uint32_t)(ratio - 1.0f);  
 	
 }
 
@@ -170,24 +179,29 @@ unsigned short GET_OFFTIME(){
 	
 }
 
-void WAIT(int minutes){
+void WAIT(unsigned int minutes){
+	
+	RTC_TimeTypeDef zero = {.Hours = 0, .Minutes = 0, .Seconds = 0};
 	
 	RTC_TimeTypeDef time = {0};
 	RTC_DateTypeDef date = {0};
 	
-	HAL_RTC_SetTime(&hrtc, &time, RTC_FORMAT_BCD);
-	HAL_RTC_SetDate(&hrtc, &date, RTC_FORMAT_BCD);
+	HAL_RTC_SetTime(&hrtc, &zero, RTC_FORMAT_BIN);
 	
-	while(time.Minutes < minutes){
-		HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BCD);
-		HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BCD);
+	while(1){
+		
+		HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+		HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
+		
+		if( time.Minutes == minutes ) break;
+
 	}
 	
 }
 
 void INC_COUNTER(){
 
-	uint64_t counter = *(uint64_t*)COUNTER_ADDRESS;
+	uint64_t counter = *COUNTER_ADDRESS;
 	
 	HAL_FLASH_Unlock();
 	if(counter != 0xffffffffffffffff) erasepage(COUNTER_PAGE);
@@ -265,14 +279,14 @@ static void MX_RTC_Init(void)
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
   
-	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+	HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 	
   sDate.WeekDay = RTC_WEEKDAY_MONDAY;
   sDate.Month = RTC_MONTH_JANUARY;
   sDate.Date = 0x1;
   sDate.Year = 0x0;
 
-  HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD);
+  HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
 }
 
@@ -292,14 +306,14 @@ static void MX_TIM_Init(void)
 	HAL_TIM_Base_MspInit(&htim15);
 
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 399;
+  htim2.Init.Prescaler = 39;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 	
 	htim15.Instance = TIM15;
-  htim15.Init.Prescaler = 399;
+  htim15.Init.Prescaler = 39;
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim15.Init.Period = 1;
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

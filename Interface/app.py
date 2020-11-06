@@ -2,19 +2,19 @@ from tkinter import Label, Entry, Button, Tk
 import pylink
 
 RED_ADDRESS =      0x0800c000
-IR_ADDRESS  =      0x800c800
+IR_ADDRESS  =      0x0800c800
 ONTIME_ADDRESS =   0x0800e000
 OFFTIME_ADDRESS =  0x0800e800
 RED_FREQ_ADDRESS = 0x0800f000
 IR_FREQ_ADDRESS =  0x0800f800
 
-FLASH_COUNTER =   int(0x0800d000)
+FLASH_COUNTER =   0x0800d000
 # connect to the core and get the parameters from it
 
 # class that holds the stimulation parameters
 class params:
     
-    def __init__(self, LED = [0,0], FREQ = [0,0], TIME = [0,0]):
+    def __init__(self, LED = [85,40], FREQ = [3000,1500], TIME = [15,35]):
         self.LED = LED
         self.FREQ = FREQ
         self.TIME = TIME
